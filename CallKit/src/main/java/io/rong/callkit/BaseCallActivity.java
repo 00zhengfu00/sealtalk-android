@@ -185,6 +185,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         isIncoming = false;
         try {
             AssetFileDescriptor assetFileDescriptor = getResources().openRawResourceFd(R.raw.voip_outgoing_ring);
+            mMediaPlayer.reset();
             mMediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(),
                     assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
             assetFileDescriptor.close();

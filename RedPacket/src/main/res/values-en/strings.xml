@@ -123,6 +123,7 @@
 
     <!--红包显示-->
     <string name="no_rp">Better luck next time!</string>
+    <string name="no_rp_normal">The red envelope has been opened</string>
     <string name="rp_expire">The red packet has been more than 24 hours. If you have received it, you can view it in "Red Packet"</string>
 
 
