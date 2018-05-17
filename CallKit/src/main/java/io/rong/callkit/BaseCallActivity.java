@@ -1,6 +1,7 @@
 package io.rong.callkit;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -53,6 +54,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     private final static long DELAY_TIME = 1000;
     static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 100;
     static final int REQUEST_CODE_ADD_MEMBER = 110;
+    static final int VOIP_MAX_NORMAL_COUNT = 6;
 
     private MediaPlayer mMediaPlayer;
     private Vibrator mVibrator;
@@ -185,7 +187,6 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         isIncoming = false;
         try {
             AssetFileDescriptor assetFileDescriptor = getResources().openRawResourceFd(R.raw.voip_outgoing_ring);
-            mMediaPlayer.reset();
             mMediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(),
                     assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
             assetFileDescriptor.close();
@@ -239,6 +240,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         return time;
     }
 
+    @SuppressLint("MissingPermission")
     protected void stopRing() {
         if (mMediaPlayer != null) {
             mMediaPlayer.reset();
@@ -319,13 +321,8 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
             case REMOTE_HANGUP:
             case HANGUP:
             case NETWORK_ERROR:
-                text = getString(R.string.rc_voip_call_terminalted);
-                break;
-            case INIT_MIC_ERROR:
-                text = getString(R.string.rc_voip_call_mic_error);
-                break;
             case INIT_VIDEO_ERROR:
-                text = getString(R.string.rc_voip_call_camera_error);
+                text = getString(R.string.rc_voip_call_terminalted);
                 break;
             case OTHER_DEVICE_HAD_ACCEPTED:
                 text = getString(R.string.rc_voip_call_other);
@@ -335,11 +332,8 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
             showShortToast(text);
         }
         stopRing();
-        unregisterReceiver();
         NotificationUtil.clearNotification(this, BaseCallActivity.CALL_NOTIFICATION_ID);
         RongCallProxy.getInstance().setCallListener(null);
-        AudioPlayManager.getInstance().setInVoipMode(false);
-        ((AudioManager) BaseCallActivity.this.getApplicationContext().getSystemService(AUDIO_SERVICE)).setMode(AudioManager.MODE_NORMAL);
     }
 
     @Override
@@ -350,7 +344,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     }
 
     @Override
-    public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, SurfaceView remoteVideo) {
+    public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, int userType, SurfaceView remoteVideo) {
 
     }
 
@@ -373,14 +367,8 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         if (RongCallKit.getCustomerHandlerListener() != null) {
             RongCallKit.getCustomerHandlerListener().onCallConnected(callProfile, localVideo);
         }
-
-        AudioManager audioManager = (AudioManager) this.getApplicationContext().getSystemService(AUDIO_SERVICE);
-        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-        AudioPlayManager.getInstance().setInVoipMode(true);
-
         shouldShowFloat = true;
         AudioRecordManager.getInstance().destroyRecord();
-        unregisterReceiver();
     }
 
 
@@ -446,29 +434,53 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     protected void onDestroy() {
         RongContext.getInstance().getEventBus().unregister(this);
         handler.removeCallbacks(updateTimeRunnable);
-        unregisterReceiver();
+        unregisterReceiver(mRingModeReceiver);
         mMediaPlayer.release();
-        mMediaPlayer = null;
-        if (!AudioPlayManager.getInstance().isInVOIPMode(this)) {
-            // 退出此页面后应设置成正常模式，否则按下音量键无法更改其他音频类型的音量
-            AudioManager am = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-            if (am != null) {
-                am.setMode(AudioManager.MODE_NORMAL);
-            }
+        // 退出此页面后应设置成正常模式，否则按下音量键无法更改其他音频类型的音量
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            am.setMode(AudioManager.MODE_NORMAL);
         }
         super.onDestroy();
     }
 
-    private void unregisterReceiver() {
-        try {
-            unregisterReceiver(mRingModeReceiver);
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
+    @Override
+    public void onRemoteCameraDisabled(String userId, boolean muted) {
+
     }
 
     @Override
-    public void onRemoteCameraDisabled(String userId, boolean muted) {
+    public void onWhiteBoardURL(String url) {
+
+    }
+
+    @Override
+    public void onNetWorkLossRate(int lossRate) {
+
+    }
+
+    @Override
+    public void onNotifySharingScreen(String userId, boolean isSharing) {
+
+    }
+
+    @Override
+    public void onNotifyDegradeNormalUserToObserver(String userId) {
+
+    }
+
+    @Override
+    public void onNotifyAnswerObserverRequestBecomeNormalUser(String userId, long status) {
+
+    }
+
+    @Override
+    public void onNotifyUpgradeObserverToNormalUser() {
+
+    }
+
+    @Override
+    public void onNotifyHostControlUserDevice(String userId, int dType, int isOpen) {
 
     }
 
@@ -510,9 +522,9 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     boolean requestCallPermissions(RongCallCommon.CallMediaType type, int requestCode) {
         String[] permissions = null;
         if (type.equals(RongCallCommon.CallMediaType.VIDEO)) {
-            permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+            permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.INTERNET, Manifest.permission.READ_PHONE_STATE, Manifest.permission.MODIFY_AUDIO_SETTINGS};
         } else if (type.equals(RongCallCommon.CallMediaType.AUDIO)) {
-            permissions = new String[]{Manifest.permission.RECORD_AUDIO};
+            permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.INTERNET, Manifest.permission.READ_PHONE_STATE, Manifest.permission.MODIFY_AUDIO_SETTINGS};
         }
         boolean result = false;
         if (permissions != null) {

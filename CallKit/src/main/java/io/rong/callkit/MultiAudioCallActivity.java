@@ -2,11 +2,13 @@ package io.rong.callkit;
 
 import android.annotation.TargetApi;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -48,7 +50,7 @@ public class MultiAudioCallActivity extends BaseCallActivity {
 
     boolean shouldShowFloat = true;
     boolean startForCheckPermissions = false;
-
+    private boolean handFree = false;
     @Override
     @TargetApi(23)
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +65,8 @@ public class MultiAudioCallActivity extends BaseCallActivity {
         incomingLayout = (RelativeLayout) LayoutInflater.from(this).inflate(R.layout.rc_voip_item_incoming_maudio, null);
         outgoingLayout = (RelativeLayout) LayoutInflater.from(this).inflate(R.layout.rc_voip_item_outgoing_maudio, null);
         outgoingController = (FrameLayout) LayoutInflater.from(this).inflate(R.layout.rc_voip_call_bottom_connected_button_layout, null);
+        ImageView button = outgoingController.findViewById(R.id.rc_voip_call_mute_btn);
+        button.setEnabled(false);
         incomingController = (FrameLayout) LayoutInflater.from(this).inflate(R.layout.rc_voip_call_bottom_incoming_button_layout, null);
 
         startForCheckPermissions = getIntent().getBooleanExtra("checkPermissions", false);
@@ -112,6 +116,7 @@ public class MultiAudioCallActivity extends BaseCallActivity {
     public void onRestoreFloatBox(Bundle bundle) {
         super.onRestoreFloatBox(bundle);
         if (bundle != null) {
+            handFree = bundle.getBoolean("handFree");
             audioContainer.addView(outgoingLayout);
             memberContainer = (CallUserGridView) audioContainer.findViewById(R.id.rc_voip_members_container);
             FrameLayout controller = (FrameLayout) audioContainer.findViewById(R.id.rc_voip_control_layout);
@@ -179,12 +184,13 @@ public class MultiAudioCallActivity extends BaseCallActivity {
             Conversation.ConversationType conversationType = Conversation.ConversationType.valueOf(intent.getStringExtra("conversationType").toUpperCase(Locale.US));
             String targetId = intent.getStringExtra("targetId");
             ArrayList<String> userIds = intent.getStringArrayListExtra("invitedUsers");
-
             audioContainer.addView(outgoingLayout);
             memberContainer = (CallUserGridView) audioContainer.findViewById(R.id.rc_voip_members_container);
             memberContainer.enableShowState(true);
             FrameLayout controller = (FrameLayout) audioContainer.findViewById(R.id.rc_voip_control_layout);
             controller.addView(outgoingController);
+            ImageView button = outgoingController.findViewById(R.id.rc_voip_call_mute_btn);
+            button.setEnabled(false);
             for (int i = 0; i < userIds.size(); i++) {
                 if (!userIds.get(i).equals(RongIMClient.getInstance().getCurrentUserId())) {
                     invitedList.add(userIds.get(i));
@@ -192,7 +198,7 @@ public class MultiAudioCallActivity extends BaseCallActivity {
                     memberContainer.addChild(userIds.get(i), userInfo, getString(R.string.rc_voip_call_connecting));
                 }
             }
-            RongCallClient.getInstance().startCall(conversationType, targetId, invitedList, RongCallCommon.CallMediaType.AUDIO, "multi");
+            RongCallClient.getInstance().startCall(conversationType, targetId, invitedList, null, RongCallCommon.CallMediaType.AUDIO, "multi");
         }
         memberContainer.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
@@ -277,7 +283,7 @@ public class MultiAudioCallActivity extends BaseCallActivity {
     }
 
     @Override
-    public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, SurfaceView remoteVideo) {
+    public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, int userType, SurfaceView remoteVideo) {
         View view = memberContainer.findChildById(userId);
         if (view != null) {
             memberContainer.updateChildState(userId, false);
@@ -316,8 +322,18 @@ public class MultiAudioCallActivity extends BaseCallActivity {
     @Override
     public void onCallConnected(final RongCallSession callSession, SurfaceView localVideo) {
         super.onCallConnected(callSession, localVideo);
-        RongCallClient.getInstance().setEnableSpeakerphone(false);
+        RongCallClient.getInstance().setEnableLocalVideo(false);
         this.callSession = callSession;
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        if (audioManager.isWiredHeadsetOn()) {
+            RongCallClient.getInstance().setEnableSpeakerphone(false);
+        } else {
+            RongCallClient.getInstance().setEnableSpeakerphone(handFree);
+        }
+        View handFreeV = outgoingLayout.findViewById(R.id.rc_voip_handfree);
+        if (handFreeV != null) {
+            handFreeV.setSelected(handFree);
+        }
         stopRing();
 
         if (callAction.equals(RongCallAction.ACTION_INCOMING_CALL)) {
@@ -338,6 +354,8 @@ public class MultiAudioCallActivity extends BaseCallActivity {
 
         outgoingLayout.findViewById(R.id.rc_voip_remind).setVisibility(View.GONE);
         outgoingLayout.findViewById(R.id.rc_voip_handfree).setVisibility(View.VISIBLE);
+        ImageView button = outgoingController.findViewById(R.id.rc_voip_call_mute_btn);
+        button.setEnabled(true);
         outgoingLayout.findViewById(R.id.rc_voip_call_mute).setVisibility(View.VISIBLE);
 
         View muteV = outgoingLayout.findViewById(R.id.rc_voip_call_mute_btn);
@@ -498,6 +516,7 @@ public class MultiAudioCallActivity extends BaseCallActivity {
     public void onHandFreeButtonClick(View view) {
         RongCallClient.getInstance().setEnableSpeakerphone(!view.isSelected());
         view.setSelected(!view.isSelected());
+        handFree = view.isSelected();
     }
 
     public void onMuteButtonClick(View view) {
@@ -512,6 +531,7 @@ public class MultiAudioCallActivity extends BaseCallActivity {
         if (shouldShowFloat) {
             intentAction = getIntent().getAction();
             bundle.putInt("mediaType", RongCallCommon.CallMediaType.AUDIO.getValue());
+            bundle.putBoolean("handFree", handFree);
         }
         return intentAction;
     }

@@ -91,8 +91,6 @@ public class CallEndMessageItemProvider extends IContainerItemProvider.MessagePr
                 break;
             case NETWORK_ERROR:
             case REMOTE_NETWORK_ERROR:
-            case INIT_MIC_ERROR:
-            case INIT_VIDEO_ERROR:
                 msgContent = v.getResources().getString(R.string.rc_voip_call_interrupt);
                 break;
             case OTHER_DEVICE_HAD_ACCEPTED:

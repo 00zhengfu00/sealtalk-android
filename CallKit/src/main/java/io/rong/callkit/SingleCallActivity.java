@@ -3,6 +3,7 @@ package io.rong.callkit;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.media.AudioManager;
+import android.media.Image;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -30,7 +31,6 @@ import io.rong.calllib.message.CallSTerminateMessage;
 import io.rong.common.RLog;
 import io.rong.imkit.RongContext;
 import io.rong.imkit.RongIM;
-import io.rong.imkit.manager.AudioPlayManager;
 import io.rong.imkit.utilities.PermissionCheckUtil;
 import io.rong.imkit.widget.AsyncImageView;
 import io.rong.imlib.RongIMClient;
@@ -227,7 +227,7 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
 
             List<String> userIds = new ArrayList<>();
             userIds.add(targetId);
-            RongCallClient.getInstance().startCall(conversationType, targetId, userIds, mediaType, null);
+            RongCallClient.getInstance().startCall(conversationType, targetId, userIds, null, mediaType, null);
         } else { // resume call
             callSession = RongCallClient.getInstance().getCallSession();
             mediaType = callSession.getMediaType();
@@ -275,8 +275,11 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
         userInfoLayout.findViewById(R.id.rc_voip_call_minimize).setVisibility(View.GONE);
 
         if (callAction.equals(RongCallAction.ACTION_OUTGOING_CALL)) {
-            buttonLayout.findViewById(R.id.rc_voip_call_mute).setVisibility(View.GONE);
-            buttonLayout.findViewById(R.id.rc_voip_handfree).setVisibility(View.GONE);
+            RelativeLayout layout = buttonLayout.findViewById(R.id.rc_voip_call_mute);
+            layout.setVisibility(View.VISIBLE);
+            ImageView button = buttonLayout.findViewById(R.id.rc_voip_call_mute_btn);
+            button.setEnabled(false);
+            buttonLayout.findViewById(R.id.rc_voip_handfree).setVisibility(View.VISIBLE);
         }
 
         if (mediaType.equals(RongCallCommon.CallMediaType.AUDIO)) {
@@ -327,6 +330,8 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
         if (callSession.getMediaType().equals(RongCallCommon.CallMediaType.AUDIO)) {
             findViewById(R.id.rc_voip_call_minimize).setVisibility(View.VISIBLE);
             FrameLayout btnLayout = (FrameLayout) inflater.inflate(R.layout.rc_voip_call_bottom_connected_button_layout, null);
+            ImageView button = btnLayout.findViewById(R.id.rc_voip_call_mute_btn);
+            button.setEnabled(true);
             mButtonContainer.removeAllViews();
             mButtonContainer.addView(btnLayout);
         } else {
@@ -352,7 +357,7 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
             muteV.setSelected(muted);
         }
 
-        AudioManager audioManager = (AudioManager) this.getApplicationContext().getSystemService(AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         if (audioManager.isWiredHeadsetOn()) {
             RongCallClient.getInstance().setEnableSpeakerphone(false);
         } else {
@@ -377,8 +382,8 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
     }
 
     @Override
-    public void onRemoteUserJoined(final String userId, RongCallCommon.CallMediaType mediaType, SurfaceView remoteVideo) {
-        super.onRemoteUserJoined(userId, mediaType, remoteVideo);
+    public void onRemoteUserJoined(final String userId, RongCallCommon.CallMediaType mediaType, int userType, SurfaceView remoteVideo) {
+        super.onRemoteUserJoined(userId, mediaType, userType, remoteVideo);
         if (mediaType.equals(RongCallCommon.CallMediaType.VIDEO)) {
             findViewById(R.id.rc_voip_call_information).setBackgroundColor(getResources().getColor(android.R.color.transparent));
             mLPreviewContainer.setVisibility(View.VISIBLE);
@@ -561,7 +566,6 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
                 @Override
                 public void run() {
                     finish();
-
                 }
             });
             return;
@@ -651,7 +655,7 @@ public class SingleCallActivity extends BaseCallActivity implements Handler.Call
         onCallConnected(callSession, localVideo);
         if (remoteVideo != null && remoteVideo.getParent() != null) {
             ((ViewGroup) remoteVideo.getParent()).removeView(remoteVideo);
-            onRemoteUserJoined(remoteUserId, mediaType, remoteVideo);
+            onRemoteUserJoined(remoteUserId, mediaType, 1, remoteVideo);
         }
     }
 

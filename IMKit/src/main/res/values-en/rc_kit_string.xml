@@ -200,6 +200,7 @@
     <string name="rc_ac_file_preview_deleted">File has expired or has already been cleared</string>
     <string name="rc_fr_file_list_most_selected_files">You can only choose 20 files</string>
     <string name="rc_ac_file_download_request_permission">You have to grant permissions in setting</string>
+    <string name="rc_fr_file_size_limit">File size can not exceed %1$d%2$s</string>
     <string name="rc_ac_file_download_request_permission_sure">OK</string>
     <string name="rc_ac_file_download_request_permission_cancel">Cancel</string>
     <string name="rc_read_receipt_status">%d read</string>

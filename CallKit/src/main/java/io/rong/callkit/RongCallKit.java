@@ -117,6 +117,30 @@ public class RongCallKit {
     }
 
     /**
+     *  发起的多人通话，不依赖群、讨论组等
+     * @param context
+     * @param userIds 邀请的成员
+     * @param oberverIds 邀请的以观察者身份加入房间的成员
+     * @param mediaType
+     */
+    public static void startMultiCall(final Context context, ArrayList<String> userIds, ArrayList<String> oberverIds, final CallMediaType mediaType) {
+        String action;
+        if (mediaType.equals(CallMediaType.CALL_MEDIA_TYPE_AUDIO)) {
+            action = RongVoIPIntent.RONG_INTENT_ACTION_VOIP_MULTIAUDIO;
+        } else {
+            action = RongVoIPIntent.RONG_INTENT_ACTION_VOIP_MULTIVIDEO;
+        }
+        Intent intent = new Intent(action);
+        userIds.add(RongIMClient.getInstance().getCurrentUserId());
+        intent.putExtra("conversationType", Conversation.ConversationType.NONE.getName().toLowerCase());
+        intent.putExtra("callAction", RongCallAction.ACTION_OUTGOING_CALL.getName());
+        intent.putStringArrayListExtra("invitedUsers", userIds);
+        intent.putStringArrayListExtra("observerUsers", oberverIds);
+        intent.setPackage(context.getPackageName());
+        context.startActivity(intent);
+    }
+
+    /**
      * 发起的多人通话，不依赖群、讨论组等
      * <p>
      * <a href="http://support.rongcloud.cn/kb/Njcy">如何实现不基于于群组的voip</a>

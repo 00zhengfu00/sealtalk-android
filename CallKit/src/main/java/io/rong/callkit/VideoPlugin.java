@@ -132,11 +132,13 @@ public class VideoPlugin implements IPluginModule, IPluginRequestPermissionResul
 
         Intent intent = new Intent(RongVoIPIntent.RONG_INTENT_ACTION_VOIP_MULTIVIDEO);
         ArrayList<String> userIds = data.getStringArrayListExtra("invited");
+        ArrayList<String> observerIds = data.getStringArrayListExtra("observers");
         userIds.add(RongIMClient.getInstance().getCurrentUserId());
         intent.putExtra("conversationType", conversationType.getName().toLowerCase(Locale.US));
         intent.putExtra("targetId", targetId);
         intent.putExtra("callAction", RongCallAction.ACTION_OUTGOING_CALL.getName());
         intent.putStringArrayListExtra("invitedUsers", userIds);
+        intent.putStringArrayListExtra("observerUsers", observerIds);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setPackage(context.getPackageName());
         context.getApplicationContext().startActivity(intent);

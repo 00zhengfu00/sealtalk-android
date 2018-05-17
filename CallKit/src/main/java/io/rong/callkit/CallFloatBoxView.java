@@ -214,7 +214,7 @@ public class CallFloatBoxView {
             }
 
             @Override
-            public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, SurfaceView remoteVideo) {
+            public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, int userType, SurfaceView remoteVideo) {
 
             }
 
@@ -240,6 +240,41 @@ public class CallFloatBoxView {
 
             @Override
             public void onRemoteCameraDisabled(String userId, boolean muted) {
+
+            }
+
+            @Override
+            public void onWhiteBoardURL(String url) {
+
+            }
+
+            @Override
+            public void onNetWorkLossRate(int lossRate) {
+
+            }
+
+            @Override
+            public void onNotifySharingScreen(String userId, boolean isSharing) {
+
+            }
+
+            @Override
+            public void onNotifyDegradeNormalUserToObserver(String userId) {
+
+            }
+
+            @Override
+            public void onNotifyAnswerObserverRequestBecomeNormalUser(String userId, long status) {
+
+            }
+
+            @Override
+            public void onNotifyUpgradeObserverToNormalUser() {
+
+            }
+
+            @Override
+            public void onNotifyHostControlUserDevice(String userId, int dType, int isOpen) {
 
             }
         });
