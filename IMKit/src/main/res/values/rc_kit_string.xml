@@ -46,6 +46,7 @@
     <string name="rc_recall_failed">撤回失败</string>
     <string name="rc_you_recalled_a_message">你撤回了一条消息</string>
     <string name="rc_recalled_a_message">&#160;撤回了一条消息</string>
+    <string name="rc_exceeded_max_limit">超出最大限制</string>
 
     <string name="rc_message_unread_count">"···"</string>
     <string name="rc_input_voice">按住 说话</string>
@@ -170,7 +171,7 @@
     <string name="rc_ad_folder_no_files">空文件夹</string>
     <string name="rc_ad_file_size">大小:%1$s</string>
     <string name="rc_ac_file_download_btn">开始下载</string>
-    <string name="rc_ac_file_download_progress_tv">正在下载...(%1$s/%2$s)</string>
+    <string name="rc_ac_file_download_progress_tv">下载中...(%1$s/%2$s)</string>
     <string name="rc_ac_file_download_open_file_btn">打开文件</string>
     <string name="rc_ac_file_send_preview">发文件</string>
     <string name="rc_ad_send_file_no_select_file">发送</string>
@@ -188,6 +189,8 @@
     <string name="rc_ac_file_preview_downloaded">已下载</string>
     <string name="rc_ac_file_preview_download_error">下载失败</string>
     <string name="rc_ac_file_preview_download_cancel">已取消下载</string>
+    <string name="rc_ac_file_download_progress_pause">已取消(%1$s/%2$s)</string>
+    <string name="rc_ac_file_preview_download_resume">继续下载</string>
     <string name="rc_ac_file_preview_deleted">文件已过期或已被清理</string>
     <string name="rc_fr_file_list_most_selected_files">您最多只能选择20个文件</string>
     <string name="rc_fr_file_size_limit">您选择的文件不能超过 %1$d%2$s</string>
