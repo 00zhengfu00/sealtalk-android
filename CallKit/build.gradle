@@ -7,8 +7,8 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 23
-        versionCode 2018062015
-        versionName "2.9.1 Stable"
+        versionCode 2018070910
+        versionName "2.9.2 Dev"
     }
     buildTypes {
         release {
@@ -26,4 +26,6 @@ dependencies {
     compile 'com.android.support:support-v4:26.0.0'
     compile project(':IMKit')
     compile project(':CallLib')
+	compile 'com.github.bumptech.glide:glide:4.0.0'
+	compile 'com.google.code.gson:gson:2.2.4'
 }

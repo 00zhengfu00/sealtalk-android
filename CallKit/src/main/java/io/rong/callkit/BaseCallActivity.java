@@ -23,6 +23,7 @@ import android.os.PowerManager;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.rong.callkit.util.CallKitUtils;
 import io.rong.calllib.IRongCallListener;
 import io.rong.calllib.RongCallClient;
 import io.rong.calllib.RongCallCommon;
@@ -45,12 +47,15 @@ import io.rong.imkit.manager.AudioRecordManager;
 import io.rong.imkit.utilities.PermissionCheckUtil;
 import io.rong.imkit.utils.NotificationUtil;
 
+import static io.rong.callkit.CallFloatBoxView.showFB;
+
 /**
  * Created by weiqinxiao on 16/3/9.
  */
 public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCallListener, PickupDetector.PickupDetectListener {
 
     private static final String TAG = "BaseCallActivity";
+    private static final String MEDIAPLAYERTAG = "MEDIAPLAYERTAG";
     private final static long DELAY_TIME = 1000;
     static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 100;
     static final int REQUEST_CODE_ADD_MEMBER = 110;
@@ -60,7 +65,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     private Vibrator mVibrator;
     private long time = 0;
     private Runnable updateTimeRunnable;
-    private boolean shouldShowFloat;
+
     private boolean shouldRestoreFloat;
     //是否是请求开启悬浮窗权限的过程中
     private boolean checkingOverlaysPermission;
@@ -84,8 +89,8 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
      */
     private boolean isIncoming;
 
-    public void setShouldShowFloat(boolean shouldShowFloat) {
-        this.shouldShowFloat = shouldShowFloat;
+    public void setShouldShowFloat(boolean ssf) {
+        CallKitUtils.shouldShowFloat = ssf;
     }
 
     public void showShortToast(String text) {
@@ -156,21 +161,32 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         AudioRecordManager.getInstance().destroyRecord();
         RongContext.getInstance().getEventBus().register(this);
 
-        mMediaPlayer = new MediaPlayer();
-        mMediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mp) {
-                if (mp != null) {
-                    mp.setLooping(true);
-                    mp.start();
-                }
-            }
-        });
+        initMp();
 
         //注册 BroadcastReceiver 监听情景模式的切换
         IntentFilter filter = new IntentFilter();
         filter.addAction(AudioManager.RINGER_MODE_CHANGED_ACTION);
         registerReceiver(mRingModeReceiver, filter);
+    }
+
+    private void initMp() {
+        if(mMediaPlayer==null) {
+            mMediaPlayer = new MediaPlayer();
+            mMediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    try {
+                        if (mp != null) {
+                            mp.setLooping(true);
+                            mp.start();
+                        }
+                    } catch (IllegalStateException e) {
+                        e.printStackTrace();
+                        Log.i(MEDIAPLAYERTAG,"setOnPreparedListener Error!");
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -186,6 +202,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     public void onOutgoingCallRinging() {
         isIncoming = false;
         try {
+            initMp();
             AssetFileDescriptor assetFileDescriptor = getResources().openRawResourceFd(R.raw.voip_outgoing_ring);
             mMediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(),
                     assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
@@ -210,6 +227,8 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }catch (IllegalStateException  e1){
+            Log.i(MEDIAPLAYERTAG,"---onOutgoingCallRinging IllegalStateException---");
         }
     }
 
@@ -229,11 +248,16 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     }
 
     public void setupTime(final TextView timeView) {
-        if (updateTimeRunnable != null) {
-            handler.removeCallbacks(updateTimeRunnable);
+        try {
+            if (updateTimeRunnable != null) {
+                handler.removeCallbacks(updateTimeRunnable);
+            }
+            timeView.setVisibility(View.VISIBLE);
+            updateTimeRunnable = new UpdateTimeRunnable(timeView);
+            handler.post(updateTimeRunnable);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        updateTimeRunnable = new UpdateTimeRunnable(timeView);
-        handler.post(updateTimeRunnable);
     }
 
     public long getTime() {
@@ -242,11 +266,19 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
 
     @SuppressLint("MissingPermission")
     protected void stopRing() {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.reset();
-        }
-        if (mVibrator != null) {
-            mVibrator.cancel();
+        try {
+            if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+                mMediaPlayer.stop();
+            }
+            if (mMediaPlayer != null) {
+                mMediaPlayer.reset();
+            }
+            if (mVibrator != null) {
+                mVibrator.cancel();
+            }
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+            Log.i(MEDIAPLAYERTAG,"mMediaPlayer stopRing error="+((e==null)?"null":e.getMessage()));
         }
     }
 
@@ -265,6 +297,9 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
             } catch (IOException e1) {
                 e1.printStackTrace();
                 RLog.e(TAG, "Ringtone not found: " + uri);
+            }catch (IllegalStateException el) {
+                el.printStackTrace();
+                Log.i(MEDIAPLAYERTAG,"startRing--IllegalStateException");
             }
         }
     }
@@ -280,6 +315,8 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
 
     @Override
     public void onCallOutgoing(RongCallSession callProfile, SurfaceView localVideo) {
+        CallKitUtils.shouldShowFloat = true;
+        CallKitUtils.isDial=true;
     }
 
     @Override
@@ -292,7 +329,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         if (RongCallKit.getCustomerHandlerListener() != null) {
             RongCallKit.getCustomerHandlerListener().onCallDisconnected(callProfile, reason);
         }
-        shouldShowFloat = false;
+        CallKitUtils.shouldShowFloat = false;
 
         String text = null;
         switch (reason) {
@@ -345,7 +382,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
 
     @Override
     public void onRemoteUserJoined(String userId, RongCallCommon.CallMediaType mediaType, int userType, SurfaceView remoteVideo) {
-
+        CallKitUtils.isDial=false;
     }
 
     @Override
@@ -367,23 +404,25 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         if (RongCallKit.getCustomerHandlerListener() != null) {
             RongCallKit.getCustomerHandlerListener().onCallConnected(callProfile, localVideo);
         }
-        shouldShowFloat = true;
+        CallKitUtils.shouldShowFloat = true;
+        CallKitUtils.isDial=false;
         AudioRecordManager.getInstance().destroyRecord();
     }
 
 
     @Override
     protected void onPause() {
-        if (shouldShowFloat && !checkingOverlaysPermission) {
+        if (CallKitUtils.shouldShowFloat && !checkingOverlaysPermission) {
             Bundle bundle = new Bundle();
             String action = onSaveFloatBoxState(bundle);
             if (checkDrawOverlaysPermission(true)) {
                 if (action != null) {
                     bundle.putString("action", action);
-                    CallFloatBoxView.showFloatBox(getApplicationContext(), bundle);
+                    showFB(getApplicationContext(),bundle);
                     int mediaType = bundle.getInt("mediaType");
                     showOnGoingNotification(getString(R.string.rc_call_on_going),
-                            mediaType == RongCallCommon.CallMediaType.AUDIO.getValue() ? getString(R.string.rc_audio_call_on_going) : getString(R.string.rc_video_call_on_going));
+                            mediaType == RongCallCommon.CallMediaType.AUDIO.getValue()
+                                    ? getString(R.string.rc_audio_call_on_going) : getString(R.string.rc_video_call_on_going));
                     if (!isFinishing()) {
                         finish();
                     }
@@ -412,7 +451,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         time = activeTime == 0 ? 0 : (System.currentTimeMillis() - activeTime) / 1000;
         shouldRestoreFloat = true;
         if (time > 0) {
-            shouldShowFloat = true;
+            CallKitUtils.shouldShowFloat = true;
         }
         if (checkingOverlaysPermission) {
             checkDrawOverlaysPermission(false);
@@ -432,14 +471,25 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
 
     @Override
     protected void onDestroy() {
-        RongContext.getInstance().getEventBus().unregister(this);
-        handler.removeCallbacks(updateTimeRunnable);
-        unregisterReceiver(mRingModeReceiver);
-        mMediaPlayer.release();
-        // 退出此页面后应设置成正常模式，否则按下音量键无法更改其他音频类型的音量
-        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (am != null) {
-            am.setMode(AudioManager.MODE_NORMAL);
+        try {
+            RongContext.getInstance().getEventBus().unregister(this);
+            handler.removeCallbacks(updateTimeRunnable);
+            unregisterReceiver(mRingModeReceiver);
+            if(mMediaPlayer!=null && mMediaPlayer.isPlaying()){
+                mMediaPlayer.stop();
+            }
+            mMediaPlayer.release();
+            // 退出此页面后应设置成正常模式，否则按下音量键无法更改其他音频类型的音量
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                am.setMode(AudioManager.MODE_NORMAL);
+            }
+            if(mMediaPlayer!=null){
+                mMediaPlayer=null;
+            }
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+            Log.i(MEDIAPLAYERTAG,"--- onDestroy IllegalStateException---");
         }
         super.onDestroy();
     }
@@ -484,6 +534,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
 
     }
 
+    /** onStart时恢复浮窗 **/
     public void onRestoreFloatBox(Bundle bundle) {
 
     }
@@ -499,6 +550,7 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
     protected void onAddMember(List<String> newMemberIds) {
     }
 
+    /** onPause时保存页面各状态数据 **/
     public String onSaveFloatBoxState(Bundle bundle) {
         return null;
     }
@@ -635,4 +687,12 @@ public class BaseCallActivity extends BaseNoActionBarActivity implements IRongCa
         }
     }
 
+    public void openSpeakerphoneNoWiredHeadsetOn(){
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        if (audioManager.isWiredHeadsetOn()) {
+            RongCallClient.getInstance().setEnableSpeakerphone(false);
+        } else {
+            RongCallClient.getInstance().setEnableSpeakerphone(true);
+        }
+    }
 }

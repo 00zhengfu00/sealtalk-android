@@ -41,6 +41,7 @@ public class RongCallModule implements IExternalModule {
         RongCallClient.getInstance().setVoIPCallListener(RongCallProxy.getInstance());
         // 开启音视频日志，如果不需要开启，则去掉下面这句。
         RongCallClient.getInstance().setEnablePrintLog(true);
+        RongCallClient.getInstance().setVideoProfile(RongCallCommon.CallVideoProfile.VIDEO_PROFILE_480P);
     }
 
     @Override
@@ -87,8 +88,10 @@ public class RongCallModule implements IExternalModule {
     @Override
     public List<IPluginModule> getPlugins(Conversation.ConversationType conversationType) {
         List<IPluginModule> pluginModules = new ArrayList<>();
-        pluginModules.add(new AudioPlugin());
-        pluginModules.add(new VideoPlugin());
+        if (RongCallClient.getInstance().isVoIPEnabled(mContext)) {
+            pluginModules.add(new AudioPlugin());
+            pluginModules.add(new VideoPlugin());
+        }
         return pluginModules;
     }
 

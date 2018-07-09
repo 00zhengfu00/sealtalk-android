@@ -70,6 +70,7 @@
         <item>@drawable/u26c4</item>
         <item>@drawable/u1f44d</item>
         <item>@drawable/u1f44e</item>
+        <item>@drawable/u1f91d</item>
         <item>@drawable/u1f44c</item>
         <item>@drawable/u1f44a</item>
         <item>@drawable/u270a</item>
@@ -201,6 +202,7 @@
         <item>0x26c4</item>
         <item>0x1f44d</item>
         <item>0x1f44e</item>
+        <item>0x1f91d</item>
         <item>0x1f44c</item>
         <item>0x1f44a</item>
         <item>0x270a</item>
